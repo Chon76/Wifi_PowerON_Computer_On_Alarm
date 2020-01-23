@@ -1,9 +1,10 @@
-// §Midnight crisis: when the webserver gives 0:0 and the current time is 0:0
+// § Midnight crisis: when the webserver gives 0:0 and the current time is 0:0
 
 #include <ESP8266WebServer.h> // AP, webserver
+#include <ESP8266WiFi.h> // connect to internet
 #include <NTPClient.h> // get time from NTP server
-#include <ESP8266WiFi.h> // connect to AP
-#include <WiFiUdp.h> // 
+#include <WiFiUdp.h> //  get time from NTP server
+#include <Wire.h> // i2c communication
 
 
 //==============================================================
@@ -41,40 +42,45 @@ unsigned long timers[2];
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
+#define PIN D7
 
 //==============================================================
 //                  Declare Functions
 //==============================================================
 // Web server
+void connectToInternet();
+void createAP();
 void handleRoot();
 void handleCss();
-void HandleForm();
+void handleForm();
 String SendHTML(String);
 
 //Current Time
-bool compareTime(int, int, int, int);
+void getCurrentTime();
+bool compareTime();
+
+void debug();
 
 //==============================================================
 //                  SETUP
 //==============================================================
 void setup(void) {
+  // Preparation
   Serial.begin(115200);
   Serial.println("");
 
+
+  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(PIN, OUTPUT);
+  digitalWrite(PIN, LOW);
+
+  Wire.begin(D1, D2); // I am the master!
+
   WiFi.mode(WIFI_AP_STA); // Set wifi mode to access point and station
 
-  // Config Station
-  WiFi.begin(ssid_STA, password_STA);
-  Serial.print("Connecting");
-  while ( WiFi.status() != WL_CONNECTED ) {
-    delay (500);
-    Serial.print(".");
-  }
 
-  // Config AP
-  WiFi.softAP(ssid_AP, password_AP);
-  WiFi.softAPConfig(local_ip, gateway, subnet);
-  delay(100);
+  connectToInternet();
+  createAP();
 
   // Display webpage
   server.on("/", handleRoot);      //Which routine to handle at root location
@@ -87,6 +93,7 @@ void setup(void) {
   Serial.println("HTTP server started");
 
   timeClient.begin();
+
 }
 //==============================================================
 //                     LOOP
@@ -94,56 +101,36 @@ void setup(void) {
 void loop(void) {
   server.handleClient();          //Handle client requests
 
-  if  (millis() - timers[0] >= 1000) {
-    timers[0] = millis();
+  getCurrentTime();
 
-    if (WiFi.status() == WL_CONNECTED) {
-      timeClient.update();
-
-      currentTime_hours = timeClient.getHours();
-      currentTime_minutes = timeClient.getMinutes();
-    } else {
-      if  (millis() - timers[1] >= 1000 * 60) {
-        timers[1] = millis();
-        currentTime_minutes++;
-        if (currentTime_minutes > 60) {
-          currentTime_minutes = 0;
-          currentTime_hours++;
-        }
-        if (currentTime_hours > 24) {
-          currentTime_hours = 0;
-        }
-      }
-    }
-
-    // ==============
-    //     DEBUG
-    // ==============
-    Serial.println("======");
-    Serial.print("Current time: ");
-    Serial.print(currentTime_hours);
-    Serial.print(":");
-    Serial.println(currentTime_minutes);
-
-    Serial.print("Alarm: ");
-    Serial.print(powerOnTime_hours);
-    Serial.print(":");
-    Serial.println(powerOnTime_minutes);
-
-    Serial.print("WIFI state: ");
-    Serial.println(WiFi.status());
-    Serial.print("Number of connected clients: ");
-    Serial.println(WiFi.softAPgetStationNum());
-    Serial.println("======");
-
-    compareTime(powerOnTime_hours, powerOnTime_minutes, currentTime_hours, currentTime_minutes);
-
-  }
+  sendSignal();
+  debug();
 }
 
 //==============================================================
 //                    Web Server
 //==============================================================
+
+// Config Station
+void connectToInternet() {
+  WiFi.begin(ssid_STA, password_STA);
+  Serial.print("Connecting");
+  while ( WiFi.status() != WL_CONNECTED ) {
+    digitalWrite(LED_BUILTIN, HIGH); // ==> LED:OFF
+    delay(250);
+    digitalWrite(LED_BUILTIN, LOW); // ==> LED:ON
+    delay (250);
+    Serial.print(".");
+  }
+  digitalWrite(LED_BUILTIN, HIGH); // ==> LED:OFF
+}
+
+// Config AP
+void createAP() {
+  WiFi.softAP(ssid_AP, password_AP);
+  WiFi.softAPConfig(local_ip, gateway, subnet);
+  delay(100);
+}
 
 void handleRoot() {
   server.send(200, "text/html", SendHTML(powerOnTime)); //Send web page
@@ -160,11 +147,11 @@ void handleForm() {
   powerOnTime_minutes = powerOnTime.substring(powerOnTime.indexOf(':') + 1).toInt();
 
   // After deleting alarm to protect midnight crisis
-  if(powerOnTime_hours == 0 || powerOnTime_minutes == 0) {
+  if (powerOnTime_hours == 0 && powerOnTime_minutes == 0) {
     powerOnTime_hours = -1; // = 255
     powerOnTime_minutes = -1; // = 255
   }
-  
+
   server.send(200, "text/html", SendHTML(powerOnTime)); //Send web page
 }
 
@@ -201,17 +188,74 @@ String SendHTML(String powerOnTime = "") {
 //==============================================================
 //                     getCurrentTime
 //==============================================================
-bool compareTime(int timeA1, int timeA2, int timeB1, int timeB2) {
-    if (powerOnTime_hours == currentTime_hours && powerOnTime_minutes == currentTime_minutes) {
-      Serial.println("ALARM IS ON!! RING-RING-RING!\n D7:ON");
-      return true;
+// Check internet connection and calculate time considering the connection
+void getCurrentTime() {
+  if  (millis() - timers[0] >= 1000) {
+    timers[0] = millis();
+    if (WiFi.status() == WL_CONNECTED) {
+      timeClient.update();
+      currentTime_hours = timeClient.getHours();
+      currentTime_minutes = timeClient.getMinutes();
+    } else {
+      if  (millis() - timers[1] >= 1000 * 60) {
+        timers[1] = millis();
+        currentTime_minutes++;
+        if (currentTime_minutes > 60) {
+          currentTime_minutes = 0;
+          currentTime_hours++;
+        }
+        if (currentTime_hours > 24) {
+          currentTime_hours = 0;
+        }
+      }
     }
-    return false;
+  }
+}
+// Compare the curent and powerON time
+bool compareTime() {
+  if (powerOnTime_hours == currentTime_hours && powerOnTime_minutes == currentTime_minutes /*+ 2*/) {
+    return true;
+  }
+  return false;
 }
 
-//TODO: finish me 
+
+//==============================================================
+//                     i2c
+//==============================================================
+
+
+
+//TODO: finish me
 void sendSignal() {
-  if (compareTime) {
-    
+  Wire.beginTransmission(8); /* begin with device address 8 */
+  if (compareTime()) {
+    Wire.write("1");
+  } else {
+    Wire.write("0");
+  }
+  Wire.endTransmission();    /* stop transmitting */
+  delay(1000);
+}
+
+void debug() {
+  Serial.println("======");
+  Serial.print("Current time: ");
+  Serial.print(currentTime_hours);
+  Serial.print(":");
+  Serial.println(currentTime_minutes);
+
+  Serial.print("Alarm: ");
+  Serial.print(powerOnTime_hours);
+  Serial.print(":");
+  Serial.println(powerOnTime_minutes);
+
+  Serial.print("WIFI state: ");
+  Serial.println(WiFi.status());
+  Serial.print("Number of connected clients: ");
+  Serial.println(WiFi.softAPgetStationNum());
+  Serial.println("======");
+  if (compareTime()) {
+    Serial.println("ALARM IS ON!! RING-RING-RING!\nD7:ON");
   }
 }
