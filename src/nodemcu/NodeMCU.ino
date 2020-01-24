@@ -1,5 +1,7 @@
 // § Midnight crisis: when the webserver gives 0:0 and the current time is 0:0
 
+// TODO: figure out how to distinguish midnight crisis and acuatlly sat alarm to 0:0
+
 #include <ESP8266WebServer.h> // AP, webserver
 #include <ESP8266WiFi.h> // connect to internet
 #include <NTPClient.h> // get time from NTP server
@@ -18,8 +20,8 @@ byte powerOnTime_hours = -1; // = 255
 byte powerOnTime_minutes = -1; // = 255
 
 // SSID and Password of your WiFi router
-const char* ssid_AP = "ESP_01";
-const char* password_AP = "12345678";
+const char* ssid_AP = "ESP8266_AP//CHON";
+const char* password_AP = "memedestroyer";
 // AP Config IP
 IPAddress local_ip(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
@@ -27,7 +29,7 @@ IPAddress subnet(255, 255, 255, 0);
 
 // SSID and Password of Wifi to connect
 const char* ssid_STA     = "netedismilyen";
-const char* password_STA = "memedestroy";
+const char* password_STA = "memedestroyer";
 
 ESP8266WebServer server(80); //Server on port 80
 
@@ -42,7 +44,6 @@ unsigned long timers[2];
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
-#define PIN D7
 
 //==============================================================
 //                  Declare Functions
@@ -71,8 +72,6 @@ void setup(void) {
 
 
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(PIN, OUTPUT);
-  digitalWrite(PIN, LOW);
 
   Wire.begin(D1, D2); // I am the master!
 
@@ -158,7 +157,7 @@ void handleForm() {
 String SendHTML(String powerOnTime = "") {
   String ptr = "<!DOCTYPE html>\n";
   ptr += "<html lang=\"en\">\n";
-
+  ptr += "\n";
   ptr += "<head>\n";
   ptr += "    <meta charset=\"UTF-8\">\n";
   ptr += "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
@@ -166,16 +165,15 @@ String SendHTML(String powerOnTime = "") {
   ptr += "    <link rel=\"stylesheet\" type=\"text/css\" href=\"main.css\">\n";
   ptr += "    <title>Arduino Wake Up Comuputer</title>\n";
   ptr += "</head>\n";
-
+  ptr += "\n";
   ptr += "<body>\n";
   ptr += "    <h1>Set Alarm</h1>\n";
   ptr += "    <div class=\"child-one\">\n";
-  ptr += "        <!--<form action=\"/action_page\">-->\n";
-  ptr += "        <input type=\"time\" id=\"wakeUpTime\" width=\"72px\" onchange=\"replaceButton()\">\n";
-  ptr += "        <input type=\"submit\" class=\"button\" value=\"Clear\" id=\"submitButton\">\n";
-  ptr += "        <!--</form>-->\n";
+  ptr += "        <form action=\"/action_page\">\n";
+  ptr += "            <input type=\"time\" name=\"powerOnTime\" id=\"wakeUpTime\" width=\"72px\" onchange=\"replaceButton()\">\n";
+  ptr += "            <input type=\"submit\" class=\"button\" value=\"Clear\" id=\"submitButton\">\n";
+  ptr += "        </form>\n";
   ptr += "    </div>\n";
-
 
   if (powerOnTime != "") {
     ptr += "<br>Alarm is set to " + powerOnTime;
@@ -184,14 +182,14 @@ String SendHTML(String powerOnTime = "") {
   }
 
   ptr += "</body>\n";
-
+  ptr += "\n";
   ptr += "</html>\n";
-
+  ptr += "\n";
   ptr += "<script>\n";
-         ptr += "    function replaceButton() {\n";
+  ptr += "    function replaceButton() {\n";
   ptr += "        var time = document.getElementById(\"wakeUpTime\").value;\n";
   ptr += "        if (time == \"\") {\n";
-         ptr += "            document.getElementById(\"submitButton\").value = \"Clear\";\n";
+  ptr += "            document.getElementById(\"submitButton\").value = \"Clear\";\n";
   ptr += "        } else {\n";
   ptr += "            document.getElementById(\"submitButton\").value = \"Set\";\n";
   ptr += "        }\n";
@@ -228,7 +226,7 @@ void getCurrentTime() {
 }
 // Compare the curent and powerON time
 bool compareTime() {
-  if (powerOnTime_hours == currentTime_hours && powerOnTime_minutes == currentTime_minutes /*+ 2*/) {
+  if (powerOnTime_hours == currentTime_hours && powerOnTime_minutes == currentTime_minutes + 2) {
     return true;
   }
   return false;
@@ -271,6 +269,6 @@ void debug() {
   Serial.println(WiFi.softAPgetStationNum());
   Serial.println("======");
   if (compareTime()) {
-    Serial.println("ALARM IS ON!! RING-RING-RING!\nD7:ON");
+    Serial.println("ALARM IS ON!! RAMA-RAMA-DING-DONG");
   }
 }
