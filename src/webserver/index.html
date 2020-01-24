@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,15 +8,26 @@
     <link rel="stylesheet" type="text/css" href="main.css">
     <title>Arduino Wake Up Comuputer</title>
 </head>
+
 <body>
     <h1>Set Alarm</h1>
-        <div class="child-one">
-            <form action="/action_page">
-                <input type="time" name="wakeUpTime" width="72px">
-                <input type="submit" class="button" value="Send">
-            </form>
-        </div>
+    <div class="child-one">
+        <!--<form action="/action_page">-->
+        <input type="time" id="wakeUpTime" width="72px" onchange="replaceButton()">
+        <input type="submit" class="button" value="Clear" id="submitButton">
+        <!--</form>-->
+    </div>
 </body>
+
 </html>
 
-
+<script>
+    function replaceButton() {
+        var time = document.getElementById("wakeUpTime").value;
+        if (time == "") {
+            document.getElementById("submitButton").value = "Clear";
+        } else {
+            document.getElementById("submitButton").value = "Set";
+        }
+    }
+</script>

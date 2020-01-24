@@ -11,7 +11,7 @@
 //                  Web Server
 //==============================================================
 // Css
-String main_css = "* {\n    font-family: 'Courier New', Courier, monospace;\n    text-align: center;\n}\n\n .child-one {\n    margin: auto;\n    display: inline-block;\n }\n\n .button {\n    background-color: #4CAF50;\n    border: none;\n    border-radius: 6px;\n    color: white;\n    padding: 16px 42px;\n    text-align: center;\n    text-decoration: none;\n    display: inline-block;\n    font-size: 16px;\n    margin: 4px 2px;\n    cursor: pointer;\n  }";
+String main_css = "* {\n    font-family: 'Courier New', Courier, monospace;\n    text-align: center;\n}\n\n .child-one {\n    margin: auto;\n    display: inline-block;\n }\n\n .button {\n    background-color: #4CAF50;\n    border: none;\n    border-radius: 6px;\n    color: white;\n    padding: 16px 42px;\n    text-align: center;\n    text-decoration: none;\n    display: inline-block;\n    font-size: 16px;\n    margin: 4px 2px;\n    cursor: pointer;\n    width: 140px;\n  }";
 
 String powerOnTime = "";
 byte powerOnTime_hours = -1; // = 255
@@ -158,6 +158,7 @@ void handleForm() {
 String SendHTML(String powerOnTime = "") {
   String ptr = "<!DOCTYPE html>\n";
   ptr += "<html lang=\"en\">\n";
+
   ptr += "<head>\n";
   ptr += "    <meta charset=\"UTF-8\">\n";
   ptr += "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
@@ -165,14 +166,16 @@ String SendHTML(String powerOnTime = "") {
   ptr += "    <link rel=\"stylesheet\" type=\"text/css\" href=\"main.css\">\n";
   ptr += "    <title>Arduino Wake Up Comuputer</title>\n";
   ptr += "</head>\n";
+
   ptr += "<body>\n";
   ptr += "    <h1>Set Alarm</h1>\n";
-  ptr += "        <div class=\"child-one\">\n";
-  ptr += "            <form action=\"/action_page\">\n";
-  ptr += "                <input type=\"time\" name=\"powerOnTime\" width=\"72px\">\n";
-  ptr += "                <input type=\"submit\" class=\"button\" value=\"Send\">\n";
-  ptr += "            </form>\n";
-  ptr += "        </div>\n";
+  ptr += "    <div class=\"child-one\">\n";
+  ptr += "        <!--<form action=\"/action_page\">-->\n";
+  ptr += "        <input type=\"time\" id=\"wakeUpTime\" width=\"72px\" onchange=\"replaceButton()\">\n";
+  ptr += "        <input type=\"submit\" class=\"button\" value=\"Clear\" id=\"submitButton\">\n";
+  ptr += "        <!--</form>-->\n";
+  ptr += "    </div>\n";
+
 
   if (powerOnTime != "") {
     ptr += "<br>Alarm is set to " + powerOnTime;
@@ -181,7 +184,19 @@ String SendHTML(String powerOnTime = "") {
   }
 
   ptr += "</body>\n";
-  ptr += "</html>";
+
+  ptr += "</html>\n";
+
+  ptr += "<script>\n";
+         ptr += "    function replaceButton() {\n";
+  ptr += "        var time = document.getElementById(\"wakeUpTime\").value;\n";
+  ptr += "        if (time == \"\") {\n";
+         ptr += "            document.getElementById(\"submitButton\").value = \"Clear\";\n";
+  ptr += "        } else {\n";
+  ptr += "            document.getElementById(\"submitButton\").value = \"Set\";\n";
+  ptr += "        }\n";
+  ptr += "    }\n";
+  ptr += "</script>";
   return ptr;
 }
 
